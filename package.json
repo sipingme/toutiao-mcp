@@ -1,5 +1,5 @@
 {
-  "name": "toutiao-mcp-server",
+  "name": "toutiao-mcp",
   "version": "1.0.0",
   "description": "今日头条 MCP 服务器 - Node.js/TypeScript 版本",
   "type": "module",
@@ -8,6 +8,19 @@
   },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sipingme/toutiao-mcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/sipingme/toutiao-mcp/issues"
+  },
+  "homepage": "https://github.com/sipingme/toutiao-mcp#readme",
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsup src/index.ts --format esm --dts",
@@ -28,7 +41,12 @@
     "toutiao",
     "mcp",
     "automation",
-    "publisher"
+    "publisher",
+    "model-context-protocol",
+    "content-management",
+    "playwright",
+    "typescript",
+    "xiaohongshu"
   ],
   "author": "Ping Si <sipingme@gmail.com>",
   "license": "Apache-2.0",
