@@ -1,0 +1,63 @@
+{
+  "name": "toutiao-mcp-server",
+  "version": "1.0.0",
+  "description": "今日头条 MCP 服务器 - Node.js/TypeScript 版本",
+  "type": "module",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsup src/index.ts --format esm --dts",
+    "start": "node dist/index.js",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest --coverage",
+    "lint": "eslint src --ext .ts",
+    "lint:fix": "eslint src --ext .ts --fix",
+    "format": "prettier --write \"src/**/*.ts\"",
+    "type-check": "tsc --noEmit",
+    "example:basic": "tsx examples/basic-usage.ts",
+    "example:multi": "tsx examples/multi-platform-publish.ts",
+    "example:batch": "tsx examples/batch-publish.ts",
+    "prepare": "npm run build"
+  },
+  "keywords": [
+    "toutiao",
+    "mcp",
+    "automation",
+    "publisher"
+  ],
+  "author": "Ping Si <sipingme@gmail.com>",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "@fastify/cors": "^9.0.0",
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "axios": "^1.6.0",
+    "date-fns": "^3.3.0",
+    "dotenv": "^16.4.0",
+    "fastify": "^5.8.2",
+    "fs-extra": "^11.2.0",
+    "pino": "^8.19.0",
+    "pino-pretty": "^10.3.0",
+    "playwright": "^1.42.0",
+    "sharp": "^0.33.0",
+    "zod": "^3.22.0"
+  },
+  "devDependencies": {
+    "@types/fs-extra": "^11.0.0",
+    "@types/node": "^20.11.0",
+    "@typescript-eslint/eslint-plugin": "^8.57.1",
+    "@typescript-eslint/parser": "^8.57.1",
+    "@vitest/coverage-v8": "^4.1.0",
+    "@vitest/ui": "^4.1.0",
+    "eslint": "^8.56.0",
+    "prettier": "^3.2.0",
+    "tsup": "^8.0.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.0",
+    "vitest": "^4.1.0"
+  }
+}

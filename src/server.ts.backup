@@ -1,0 +1,280 @@
+import { Server } from '@modelcontextprotocol/sdk/server/index.js';
+import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
+import {
+  CallToolRequestSchema,
+  ListToolsRequestSchema,
+} from '@modelcontextprotocol/sdk/types.js';
+import { AuthService } from './auth/auth.service.js';
+import { ArticlePublisher } from './publisher/article.publisher.js';
+import { MicroPublisher } from './publisher/micro.publisher.js';
+import { AnalyticsService } from './analytics/analytics.service.js';
+import { MultiPlatformService } from './multi-platform/multi-platform.service.js';
+import { logger } from './utils/logger.js';
+import { TOOL_DEFINITIONS } from './server/tool-definitions.js';
+import { formatSuccessResponse, formatErrorResponse } from './server/response-formatter.js';
+import { browserPool } from './utils/browser-pool.js';
+
+export class ToutiaoMCPServer {
+  private server: Server;
+  private authService: AuthService;
+  private articlePublisher: ArticlePublisher;
+  private microPublisher: MicroPublisher;
+  private analyticsService: AnalyticsService;
+  private multiPlatformService: MultiPlatformService;
+
+  constructor() {
+    this.server = new Server(
+      {
+        name: 'toutiao-mcp-server',
+        version: '1.0.0',
+      },
+      {
+        capabilities: {
+          tools: {},
+        },
+      }
+    );
+
+    this.authService = new AuthService();
+    this.articlePublisher = new ArticlePublisher();
+    this.microPublisher = new MicroPublisher();
+    this.analyticsService = new AnalyticsService();
+    this.multiPlatformService = new MultiPlatformService();
+
+    this.setupHandlers();
+  }
+
+  private setupHandlers() {
+    this.server.setRequestHandler(ListToolsRequestSchema, async () => ({
+      tools: TOOL_DEFINITIONS,
+        {
+          name: 'login_with_credentials',
+          description: '使用用户名密码登录今日头条',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              username: { type: 'string', description: '用户名（可选）' },
+              password: { type: 'string', description: '密码（可选）' },
+            },
+          },
+        },
+        {
+          name: 'check_login_status',
+          description: '检查当前登录状态',
+          inputSchema: {
+            type: 'object',
+            properties: {},
+          },
+        },
+        {
+          name: 'logout',
+          description: '登出当前账户',
+          inputSchema: {
+            type: 'object',
+            properties: {},
+          },
+        },
+        {
+          name: 'publish_article',
+          description: '发布图文文章',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              title: { type: 'string', description: '文章标题' },
+              content: { type: 'string', description: '文章内容' },
+              images: {
+                type: 'array',
+                items: { type: 'string' },
+                description: '图片路径列表',
+              },
+              tags: {
+                type: 'array',
+                items: { type: 'string' },
+                description: '标签列表',
+              },
+            },
+            required: ['title', 'content'],
+          },
+        },
+        {
+          name: 'publish_micro_post',
+          description: '发布微头条',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              content: { type: 'string', description: '微头条内容' },
+              images: {
+                type: 'array',
+                items: { type: 'string' },
+                description: '配图路径列表（最多9张）',
+              },
+            },
+            required: ['content'],
+          },
+        },
+        {
+          name: 'publish_xiaohongshu_data',
+          description: '批量发布小红书格式数据到今日头条',
+          inputSchema: {
+            type: 'object',
+            properties: {
+              records: {
+                type: 'array',
+                description: '小红书格式的数据记录列表',
+              },
+              downloadFolder: {
+                type: 'string',
+                description: '图片下载目录',
+                default: './downloads',
+              },
+            },
+            required: ['records'],
+          },
+        },
+      ],
+    }));
+
+    this.server.setRequestHandler(CallToolRequestSchema, async (request) => {
+      const { name, arguments: args } = request.params;
+
+      try {
+        switch (name) {
+          case 'login_with_credentials':
+            return {
+              content: [
+                {
+                  type: 'text',
+                  text: JSON.stringify(
+                    await this.authService.login(args.username, args.password),
+                    null,
+                    2
+                  ),
+                },
+              ],
+            };
+
+          case 'check_login_status':
+            return {
+              content: [
+                {
+                  type: 'text',
+                  text: JSON.stringify(
+                    {
+                      success: true,
+                      isLoggedIn: await this.authService.checkLoginStatus(),
+                    },
+                    null,
+                    2
+                  ),
+                },
+              ],
+            };
+
+          case 'logout':
+            return {
+              content: [
+                {
+                  type: 'text',
+                  text: JSON.stringify(
+                    {
+                      success: await this.authService.logout(),
+                      message: '已登出',
+                    },
+                    null,
+                    2
+                  ),
+                },
+              ],
+            };
+
+          case 'publish_article':
+            return {
+              content: [
+                {
+                  type: 'text',
+                  text: JSON.stringify(
+                    await this.articlePublisher.publish(args),
+                    null,
+                    2
+                  ),
+                },
+              ],
+            };
+
+          case 'publish_micro_post':
+            return {
+              content: [
+                {
+                  type: 'text',
+                  text: JSON.stringify(
+                    await this.microPublisher.publish(args),
+                    null,
+                    2
+                  ),
+                },
+              ],
+            };
+
+          case 'publish_xiaohongshu_data':
+            return {
+              content: [
+                {
+                  type: 'text',
+                  text: JSON.stringify(
+                    await this.multiPlatformService.publishBatch(
+                      args.records,
+                      args.downloadFolder || './downloads'
+                    ),
+                    null,
+                    2
+                  ),
+                },
+              ],
+            };
+
+          default:
+            throw new Error(`Unknown tool: ${name}`);
+        }
+      } catch (error) {
+        logger.error(`Tool execution failed: ${name}`, error);
+        return {
+          content: [
+            {
+              type: 'text',
+              text: JSON.stringify(
+                {
+                  success: false,
+                  message: `执行失败: ${error}`,
+                },
+                null,
+                2
+              ),
+            },
+          ],
+          isError: true,
+        };
+      }
+    });
+  }
+
+  async start() {
+    try {
+      await browserPool.initialize();
+      const transport = new StdioServerTransport();
+      await this.server.connect(transport);
+      logger.info('今日头条 MCP 服务器已启动');
+    } catch (error) {
+      logger.error('服务器启动失败', error);
+      throw error;
+    }
+  }
+
+  async stop() {
+    try {
+      await browserPool.cleanup();
+      logger.info('今日头条 MCP 服务器已停止');
+    } catch (error) {
+      logger.error('服务器停止失败', error);
+    }
+  }
+}
